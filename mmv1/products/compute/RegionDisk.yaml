@@ -117,6 +117,40 @@ parameters:
     resource: 'Snapshot'
     imports: 'selfLink'
 properties:
+  - name: 'sourceImageEncryptionKey'
+    type: NestedObject
+    description: |
+      The customer-supplied encryption key of the source image. Required if
+      the source image is protected by a customer-supplied encryption key.
+    immutable: true
+    properties:
+      - name: 'rawKey'
+        type: String
+        description: |
+          Specifies a 256-bit customer-supplied encryption key, encoded in
+          RFC 4648 base64 to either encrypt or decrypt this resource.
+      - name: 'sha256'
+        type: String
+        description: |
+          The RFC 4648 base64 encoded SHA-256 hash of the customer-supplied
+          encryption key that protects this resource.
+        output: true
+        # TODO Change to ResourceRef once KMS is in Magic Modules
+      - name: 'kmsKeySelfLink'
+        type: String
+        description: |
+          The self link of the encryption key used to encrypt the disk. Also called KmsKeyName
+          in the cloud console. Your project's Compute Engine System service account
+          (`service-{{PROJECT_NUMBER}}@compute-system.iam.gserviceaccount.com`) must have
+          `roles/cloudkms.cryptoKeyEncrypterDecrypter` to use this feature.
+          See https://cloud.google.com/compute/docs/disks/customer-managed-encryption#encrypt_a_new_persistent_disk_with_your_own_keys
+        api_name: kmsKeyName
+        diff_suppress_func: 'tpgresource.CompareSelfLinkRelativePaths'
+      - name: 'kmsKeyServiceAccount'
+        type: String
+        description: |
+          The service account used for the encryption request for the given KMS key.
+          If absent, the Compute Engine Service Agent service account is used.
   - name: 'diskEncryptionKey'
     type: NestedObject
     description: |
@@ -194,6 +228,15 @@ properties:
       that was later deleted and recreated under the same name, the source
       snapshot ID would identify the exact version of the snapshot that was
       used.
+    output: true
+  - name: 'sourceImageId'
+    type: String
+    description: |
+      The ID value of the image used to create this disk. This value
+      identifies the exact image that was used to create this persistent
+      disk. For example, if you created the persistent disk from an image
+      that was later deleted and recreated under the same name, the source
+      image ID would identify the exact version of the image that was used.
     output: true
   - name: 'labelFingerprint'
     type: Fingerprint
@@ -300,6 +343,21 @@ properties:
     default_value: "pd-standard"
     resource: 'RegionDiskType'
     imports: 'selfLink'
+  - name: 'image'
+    type: String
+    description: |
+      The image from which to initialize this disk. This can be
+      one of: the image's `self_link`, `projects/{project}/global/images/{image}`,
+      `projects/{project}/global/images/family/{family}`, `global/images/{image}`,
+      `global/images/family/{family}`, `family/{family}`, `{project}/{family}`,
+      `{project}/{image}`, `{family}`, or `{image}`. If referred by family, the
+      images names must include the family name. If they don't, use the
+      [google_compute_image data source](/docs/providers/google/d/compute_image.html).
+      For instance, the image `centos-6-v20180104` includes its family name `centos-6`.
+      These images can be referred by family name here.
+    api_name: sourceImage
+    immutable: true
+    diff_suppress_func: 'DiskImageDiffSuppress'
   - name: 'interface'
     type: String
     description: |
